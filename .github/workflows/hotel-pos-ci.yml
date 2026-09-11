@@ -16,6 +16,11 @@ jobs:
     defaults:
       run:
         working-directory: hotel-pos-Featuring
+    env:
+      # Build-time placeholders only. Production values are configured in Cloudflare.
+      NEXT_PUBLIC_SUPABASE_URL: https://build-placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: build-placeholder-publishable-key
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: build-placeholder-anon-key
     steps:
       - name: Checkout
         uses: actions/checkout@v4
