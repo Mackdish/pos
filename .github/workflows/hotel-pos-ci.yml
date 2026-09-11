@@ -1,0 +1,31 @@
+name: Hotel POS CI
+
+on:
+  push:
+    paths:
+      - 'hotel-pos-Featuring/**'
+      - '.github/workflows/hotel-pos-ci.yml'
+  pull_request:
+    paths:
+      - 'hotel-pos-Featuring/**'
+      - '.github/workflows/hotel-pos-ci.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: hotel-pos-Featuring
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: hotel-pos-Featuring/package-lock.json
+      - name: Install dependencies
+        run: npm install
+      - name: Build
+        run: npm run build
