@@ -1,14 +1,24 @@
 'use client';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import AppShell from '../components/AppShell';
+import { createClient } from '../lib/supabase/client';
 import { formatMoney, getOrders } from '../lib/pos';
 
 function Status({ children, tone = 'gray' }) { const style = { green: 'bg-[#e8f3e4] text-[#337032]', amber: 'bg-[#fff4dc] text-[#926718]', red: 'bg-[#fff0ee] text-[#a64840]', gray: 'bg-[#eef1ed] text-[#5d6d5f]' }; return <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold tracking-wide ${style[tone]}`}><span aria-hidden="true">{tone === 'green' ? '✓' : tone === 'amber' ? '◷' : '•'}</span>{children}</span>; }
 
 export default function OrdersPage() {
+  const router = useRouter();
   const [orders, setOrders] = useState([]); const [filter, setFilter] = useState('All'); const [search, setSearch] = useState(''); const [loading, setLoading] = useState(true); const [error, setError] = useState('');
-  useEffect(() => { getOrders().then(setOrders).catch(e => setError(e.message || 'Unable to load orders.')).finally(() => setLoading(false)); }, []);
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.from('memberships').select('id').eq('status', 'active').limit(1).then(({ data, error: membershipError }) => {
+      if (membershipError) { setError(membershipError.message); setLoading(false); return; }
+      if (!data?.length) { router.replace('/setup'); return; }
+      getOrders().then(setOrders).catch(e => setError(e.message || 'Unable to load orders.')).finally(() => setLoading(false));
+    });
+  }, [router]);
   const todayOrders = useMemo(() => { const today = new Date().toDateString(); return orders.filter(order => new Date(order.created_at).toDateString() === today); }, [orders]);
   const shown = useMemo(() => todayOrders.filter(order => { const payment = order.payments?.[0]; const method = payment?.method === 'mpesa' ? 'M-Pesa' : payment?.method === 'cash' ? 'Cash' : payment?.method || 'Other'; return (filter === 'All' || (filter === 'Pending' ? order.payment_status !== 'paid' : method === filter)) && `${order.order_number} ${order.customer_name || ''} ${order.status}`.toLowerCase().includes(search.toLowerCase()); }), [todayOrders, filter, search]);
   const total = todayOrders.reduce((sum, o) => sum + Number(o.total_amount || 0), 0), cash = todayOrders.filter(o => o.payments?.some(p => p.method === 'cash' && p.status === 'confirmed')).reduce((sum, o) => sum + Number(o.total_amount || 0), 0), mpesa = todayOrders.filter(o => o.payments?.some(p => p.method === 'mpesa')).reduce((sum, o) => sum + Number(o.total_amount || 0), 0), pending = todayOrders.filter(o => o.payment_status !== 'paid').length;
