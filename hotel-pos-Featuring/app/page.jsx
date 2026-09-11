@@ -1,25 +1,51 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { createClient } from './lib/supabase/client';
 
-const employees = [
-  { name: 'Jane W.', role: 'Receptionist', initials: 'JW', color: 'bg-[#dce8bd] text-[#45602c]' },
-  { name: 'Brian K.', role: 'Receptionist', initials: 'BK', color: 'bg-[#d9e5f5] text-[#315782]' },
-  { name: 'Mary A.', role: 'Manager', initials: 'MA', color: 'bg-[#f4dfc7] text-[#8a5a21]' },
-];
-
-export default function EmployeeSelect() {
-  const [employee, setEmployee] = useState(employees[0]);
+export default function LoginPage() {
   const router = useRouter();
-  function continueToApp() { localStorage.setItem('currentEmployee', employee.name); router.push('/orders'); }
-  return <main className="min-h-screen bg-[#e8eddd] px-5 py-8 text-[#203126] sm:grid sm:place-items-center">
-    <section className="mx-auto w-full max-w-[460px] rounded-[28px] bg-[#fbfcf8] px-7 py-9 shadow-[0_18px_55px_rgba(43,65,37,.14)] sm:px-10">
-      <div className="mb-10 flex items-center gap-3"><div className="grid h-11 w-11 place-items-center rounded-2xl bg-[#2f5b3c] text-xl text-white">LOGO</div><div><p className="text-xs font-bold uppercase tracking-[.17em] text-[#739065]">Bingo Hotel</p><p className="text-sm text-[#6e776e]">Food order book</p></div></div>
-      <p className="mb-2 text-xs font-bold uppercase tracking-[.18em] text-[#759168]">Welcome back</p><h1 className="text-3xl font-bold tracking-tight">Who is recording<br />orders today?</h1><p className="mt-3 text-[15px] leading-6 text-[#6c766d]">Choose your name to start a new shift. Every order is attributed to you.</p>
-      <div className="mt-8 space-y-3">{employees.map((person) => <button key={person.name} onClick={() => setEmployee(person)} className={`flex w-full items-center gap-4 rounded-2xl border p-4 text-left transition ${employee.name === person.name ? 'border-[#557c45] bg-[#f0f5e7] ring-1 ring-[#557c45]' : 'border-[#e2e7dc] bg-white hover:border-[#a8bb9a]'}`}><span className={`grid h-11 w-11 place-items-center rounded-full text-sm font-bold ${person.color}`}>{person.initials}</span><span className="flex-1"><span className="block font-bold">{person.name}</span><span className="text-sm text-[#7a837a]">{person.role}</span></span><span className={`h-5 w-5 rounded-full border-2 ${employee.name === person.name ? 'border-[#557c45] bg-[#557c45] shadow-[inset_0_0_0_3px_#f0f5e7]' : 'border-[#c6cec3]'}`} /></button>)}</div>
-      <button onClick={continueToApp} className="mt-8 flex w-full items-center justify-center gap-3 rounded-xl bg-[#2f5b3c] px-5 py-4 font-bold text-white shadow-lg shadow-[#2f5b3c]/20 hover:bg-[#234b30]">Continue to orders <span>→</span></button>
-      <p className="mt-5 text-center text-xs text-[#8b948b]">Your activity will be recorded for accountability.</p>
-    </section>
-  </main>;
+  const searchParams = useSearchParams();
+  const next = searchParams.get('next') || '/orders';
+  const supabase = createClient();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    setError('');
+    setLoading(true);
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+    if (signInError) {
+      setError(signInError.message || 'Unable to sign in. Check your credentials.');
+      setLoading(false);
+      return;
+    }
+    router.replace(next.startsWith('/') ? next : '/orders');
+    router.refresh();
+  }
+
+  return (
+    <main className="min-h-screen bg-[#e8eddd] px-5 py-8 text-[#203126] sm:grid sm:place-items-center">
+      <section className="mx-auto w-full max-w-[460px] rounded-[28px] bg-[#fbfcf8] px-7 py-9 shadow-[0_18px_55px_rgba(43,65,37,.14)] sm:px-10">
+        <div className="mb-10 flex items-center gap-3">
+          <div className="grid h-11 w-11 place-items-center rounded-2xl bg-[#2f5b3c] text-xl text-white">POS</div>
+          <div><p className="text-xs font-bold uppercase tracking-[.17em] text-[#739065]">Bingo Hotel</p><p className="text-sm text-[#6e776e]">Hotel & Restaurant POS</p></div>
+        </div>
+        <p className="mb-2 text-xs font-bold uppercase tracking-[.18em] text-[#759168]">Secure sign in</p>
+        <h1 className="text-3xl font-bold tracking-tight">Welcome back</h1>
+        <p className="mt-3 text-[15px] leading-6 text-[#6c766d]">Sign in with your staff account to access the point-of-sale system.</p>
+        <form onSubmit={handleSubmit} className="mt-8 space-y-4">
+          <label className="block"><span className="mb-2 block text-sm font-semibold text-[#4d5b50]">Email address</span><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" required className="w-full rounded-xl border border-[#d9e1d4] bg-white px-4 py-3.5 outline-none transition focus:border-[#557c45] focus:ring-2 focus:ring-[#557c45]/15" placeholder="staff@example.com" /></label>
+          <label className="block"><span className="mb-2 block text-sm font-semibold text-[#4d5b50]">Password</span><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" required className="w-full rounded-xl border border-[#d9e1d4] bg-white px-4 py-3.5 outline-none transition focus:border-[#557c45] focus:ring-2 focus:ring-[#557c45]/15" placeholder="••••••••" /></label>
+          {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
+          <button type="submit" disabled={loading} className="flex w-full items-center justify-center gap-3 rounded-xl bg-[#2f5b3c] px-5 py-4 font-bold text-white shadow-lg shadow-[#2f5b3c]/20 transition hover:bg-[#234b30] disabled:cursor-not-allowed disabled:opacity-60">{loading ? 'Signing in…' : 'Sign in'}{!loading && <span>→</span>}</button>
+        </form>
+        <p className="mt-6 text-center text-xs leading-5 text-[#8b948b]">Access is controlled by your organization membership and assigned permissions.</p>
+      </section>
+    </main>
+  );
 }
