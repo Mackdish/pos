@@ -1,8 +1,8 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "Bingo Hotel | Order Book",
-  description: "Hotel food orders and daily accountability",
+  title: "Bingo Hotel | Hotel & Restaurant POS",
+  description: "Secure hotel and restaurant point-of-sale operations, payments and reporting.",
 };
 
 export default function RootLayout({ children }) {
