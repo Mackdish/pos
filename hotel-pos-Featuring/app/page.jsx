@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from './lib/supabase/client';
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get('next') || '/orders';
@@ -47,5 +47,23 @@ export default function LoginPage() {
         <p className="mt-6 text-center text-xs leading-5 text-[#8b948b]">Access is controlled by your organization membership and assigned permissions.</p>
       </section>
     </main>
+  );
+}
+
+function LoginFallback() {
+  return (
+    <main className="grid min-h-screen place-items-center bg-[#e8eddd] px-5 text-[#203126]">
+      <div className="rounded-2xl bg-[#fbfcf8] px-8 py-6 text-sm text-[#6c766d] shadow-[0_18px_55px_rgba(43,65,37,.14)]">
+        Loading sign in…
+      </div>
+    </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<LoginFallback />}>
+      <LoginForm />
+    </Suspense>
   );
 }
