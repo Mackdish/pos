@@ -14,7 +14,7 @@ const primary=[
  {href:'/shifts',label:'Cashier shifts',icon:'shift'},
  {href:'/daily-summary',label:'Daily summary',icon:'summary'},
 ];
-function NavLink({item,active}){return <Link href={item.href} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${active?'bg-[#e8f3df] text-[#315f30]':'text-[#687467] hover:bg-[#f1f4ed] hover:text-[#263c2a]'}`}><span aria-hidden="true" className={`grid h-6 w-6 place-items-center text-base ${active?'text-[#4c843c]':'text-[#899688'}`}>{icons[item.icon]}</span>{item.label}</Link>}
+function NavLink({item,active}){return <Link href={item.href} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${active?'bg-[#e8f3df] text-[#315f30]':'text-[#687467] hover:bg-[#f1f4ed] hover:text-[#263c2a]'}`}><span aria-hidden="true" className={`grid h-6 w-6 place-items-center text-base ${active?'text-[#4c843c]':'text-[#899688]'}`}>{icons[item.icon]}</span>{item.label}</Link>}
 export default function AppShell({children}){const pathname=usePathname();const router=useRouter();const [superAdmin,setSuperAdmin]=useState(false);const isActive=item=>item.match?pathname===item.href||pathname.startsWith(item.match):pathname===item.href;
 useEffect(()=>{let mounted=true;createClient().rpc('is_super_admin').then(({data})=>{if(mounted)setSuperAdmin(Boolean(data));});return()=>{mounted=false;};},[pathname]);
 async function logout(){const supabase=createClient();await supabase.auth.signOut();router.replace('/');router.refresh()}
