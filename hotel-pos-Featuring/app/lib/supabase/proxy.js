@@ -2,44 +2,64 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
 
 export async function updateSession(request) {
-  let supabaseResponse = NextResponse.next({ request });
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          supabaseResponse = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          );
-        },
-      },
-    }
-  );
-
-  const { data: { claims } } = await supabase.auth.getClaims();
   const pathname = request.nextUrl.pathname;
   const isPublic = pathname === '/' || pathname.startsWith('/auth');
 
-  if (!claims?.sub && !isPublic) {
+  // Public routes do not need a Supabase session check. This is important on
+  // Cloudflare because missing runtime variables must not turn the login page
+  // into a Worker 500 error.
+  if (isPublic) {
+    return NextResponse.next({ request });
+  }
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey =
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  // Fail safely when Supabase is not configured at runtime.
+  if (!supabaseUrl || !supabaseKey) {
     const url = request.nextUrl.clone();
     url.pathname = '/';
     url.searchParams.set('next', pathname);
     return NextResponse.redirect(url);
   }
 
-  if (claims?.sub && pathname === '/') {
+  let supabaseResponse = NextResponse.next({ request });
+
+  const supabase = createServerClient(supabaseUrl, supabaseKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+        supabaseResponse = NextResponse.next({ request });
+        cookiesToSet.forEach(({ name, value, options }) =>
+          supabaseResponse.cookies.set(name, value, options)
+        );
+      },
+    },
+  });
+
+  try {
+    const {
+      data: { claims },
+    } = await supabase.auth.getClaims();
+
+    if (!claims?.sub) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/';
+      url.searchParams.set('next', pathname);
+      return NextResponse.redirect(url);
+    }
+
+    return supabaseResponse;
+  } catch (error) {
+    console.error('Supabase session check failed:', error);
     const url = request.nextUrl.clone();
-    url.pathname = '/orders';
-    url.searchParams.delete('next');
+    url.pathname = '/';
+    url.searchParams.set('next', pathname);
     return NextResponse.redirect(url);
   }
-
-  return supabaseResponse;
 }
